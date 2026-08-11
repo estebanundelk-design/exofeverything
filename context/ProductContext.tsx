@@ -27,7 +27,9 @@ export function ProductProvider({
 }: {
   children: ReactNode;
 }) {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] =
+    useState<Product[]>(initialProducts);
+
   const [loaded, setLoaded] = useState(false);
 
   // Cargar productos guardados en el navegador
@@ -36,9 +38,19 @@ export function ProductProvider({
       const savedProducts = localStorage.getItem("products");
 
       if (savedProducts) {
-        const parsedProducts: Product[] = JSON.parse(savedProducts);
+        const parsedProducts: Product[] =
+          JSON.parse(savedProducts);
 
-        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+        /*
+         * Solo usamos localStorage si realmente contiene
+         * productos.
+         *
+         * Si contiene [] usamos los productos iniciales.
+         */
+        if (
+          Array.isArray(parsedProducts) &&
+          parsedProducts.length > 0
+        ) {
           setProducts(parsedProducts);
         } else {
           setProducts(initialProducts);
@@ -73,7 +85,7 @@ export function ProductProvider({
     }
   }, []);
 
-  // Guardar cambios automáticamente
+  // Guardar productos automáticamente
   useEffect(() => {
     if (!loaded) return;
 
@@ -84,22 +96,31 @@ export function ProductProvider({
       );
     } catch (error) {
       console.error(
-        "Error guardando productos en localStorage:",
+        "Error guardando productos:",
         error
       );
     }
   }, [products, loaded]);
 
-  function addProduct(product: Omit<Product, "id">) {
+  // Agregar producto
+  function addProduct(
+    product: Omit<Product, "id">
+  ) {
     const newProduct: Product = {
       id: Date.now(),
       ...product,
     };
 
-    setProducts((prev) => [...prev, newProduct]);
+    setProducts((prev) => [
+      ...prev,
+      newProduct,
+    ]);
   }
 
-  function updateProduct(updatedProduct: Product) {
+  // Actualizar producto
+  function updateProduct(
+    updatedProduct: Product
+  ) {
     setProducts((prev) =>
       prev.map((product) =>
         product.id === updatedProduct.id
@@ -109,9 +130,12 @@ export function ProductProvider({
     );
   }
 
+  // Eliminar producto
   function deleteProduct(id: number) {
     setProducts((prev) =>
-      prev.filter((product) => product.id !== id)
+      prev.filter(
+        (product) => product.id !== id
+      )
     );
   }
 
