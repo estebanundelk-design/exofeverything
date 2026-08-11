@@ -27,32 +27,49 @@ export function ProductProvider({
 }: {
   children: ReactNode;
 }) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [loaded, setLoaded] = useState(false);
 
-  // Cargar productos al iniciar
+  // Cargar productos guardados en el navegador
   useEffect(() => {
-    const savedProducts = localStorage.getItem("products");
+    try {
+      const savedProducts = localStorage.getItem("products");
 
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    } else {
-      setProducts(initialProducts);
-      localStorage.setItem(
-        "products",
-        JSON.stringify(initialProducts)
+      if (savedProducts) {
+        const parsedProducts: Product[] = JSON.parse(savedProducts);
+
+        if (Array.isArray(parsedProducts)) {
+          setProducts(parsedProducts);
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Error cargando productos desde localStorage:",
+        error
       );
+
+      setProducts(initialProducts);
+    } finally {
+      setLoaded(true);
     }
   }, []);
 
-  // Guardar cambios automáticamente
+  // Guardar productos en localStorage
   useEffect(() => {
-    if (products.length > 0) {
+    if (!loaded) return;
+
+    try {
       localStorage.setItem(
         "products",
         JSON.stringify(products)
       );
+    } catch (error) {
+      console.error(
+        "Error guardando productos en localStorage:",
+        error
+      );
     }
-  }, [products]);
+  }, [products, loaded]);
 
   function addProduct(product: Omit<Product, "id">) {
     const newProduct: Product = {
