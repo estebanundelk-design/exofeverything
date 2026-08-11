@@ -38,9 +38,23 @@ export function ProductProvider({
       if (savedProducts) {
         const parsedProducts: Product[] = JSON.parse(savedProducts);
 
-        if (Array.isArray(parsedProducts)) {
+        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
           setProducts(parsedProducts);
+        } else {
+          setProducts(initialProducts);
+
+          localStorage.setItem(
+            "products",
+            JSON.stringify(initialProducts)
+          );
         }
+      } else {
+        setProducts(initialProducts);
+
+        localStorage.setItem(
+          "products",
+          JSON.stringify(initialProducts)
+        );
       }
     } catch (error) {
       console.error(
@@ -49,12 +63,17 @@ export function ProductProvider({
       );
 
       setProducts(initialProducts);
+
+      localStorage.setItem(
+        "products",
+        JSON.stringify(initialProducts)
+      );
     } finally {
       setLoaded(true);
     }
   }, []);
 
-  // Guardar productos en localStorage
+  // Guardar cambios automáticamente
   useEffect(() => {
     if (!loaded) return;
 
