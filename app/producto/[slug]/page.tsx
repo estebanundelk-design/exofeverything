@@ -1,124 +1,160 @@
 "use client";
 
-import { notFound } from "next/navigation";
-import Image from "next/image";
-import { products } from "@/data/products";
-import { buyProductMessage } from "@/lib/whatsapp";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, PackageSearch } from "lucide-react";
 
-interface Props {
-  params: {
-    slug: string;
-  };
-}
+import ProductCard from "@/components/products/ProductCard";
+import { useProducts } from "@/context/ProductContext";
 
-export default function ProductPage({ params }: Props) {
-  const product = products.find(
-    (item) => item.slug === params.slug
-  );
+export default function ProductosPage() {
+  const searchParams = useSearchParams();
 
-  if (!product) {
-    notFound();
+  const categoria = searchParams.get("categoria");
+  const busqueda = searchParams.get("busqueda");
+  const promociones = searchParams.get("promociones");
+
+  const { products } = useProducts();
+
+  const filteredProducts = products.filter((product) => {
+    // Filtrar por categoría
+    if (
+      categoria &&
+      product.category.toLowerCase() !== categoria.toLowerCase()
+    ) {
+      return false;
+    }
+
+    // Filtrar por búsqueda
+    if (busqueda) {
+      const query = busqueda.toLowerCase();
+
+      const matches =
+        product.name.toLowerCase().includes(query) ||
+        product.brand.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query);
+
+      if (!matches) {
+        return false;
+      }
+    }
+
+    // Filtrar promociones
+    if (promociones === "true" && product.discount <= 0) {
+      return false;
+    }
+
+    return true;
+  });
+
+  let title = "Todos los productos";
+
+  if (categoria) {
+    title = categoria;
+  }
+
+  if (promociones === "true") {
+    title = "Promociones";
+  }
+
+  if (busqueda) {
+    title = `Resultados para "${busqueda}"`;
   }
 
   return (
-    <main className="max-w-7xl mx-auto py-14 px-6">
+    <main className="min-h-screen bg-gray-100">
 
-      <div className="grid lg:grid-cols-2 gap-16">
+      {/* ENCABEZADO */}
+      <section className="bg-[#111111] text-white py-14">
+        <div className="max-w-7xl mx-auto px-6">
 
-        <div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-yellow-400 transition mb-8"
+          >
+            <ArrowLeft size={20} />
+            Volver al inicio
+          </Link>
 
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={700}
-            height={700}
-            className="rounded-3xl border"
-          />
-
-        </div>
-
-        <div>
-
-          <p className="text-blue-600 font-bold">
-            {product.brand}
-          </p>
-
-          <h1 className="text-5xl font-black mt-2">
-            {product.name}
+          <h1 className="text-4xl md:text-5xl font-black">
+            {title}
           </h1>
 
-          <div className="mt-8">
-
-            <span className="line-through text-gray-400 text-xl">
-              ${product.oldPrice.toLocaleString("es-CO")}
-            </span>
-
-            <h2 className="text-red-600 text-5xl font-black mt-2">
-              ${product.price.toLocaleString("es-CO")}
-            </h2>
-
-          </div>
-
-          <p className="mt-8 leading-8 text-gray-600">
-            {product.description}
+          <p className="text-gray-400 mt-3">
+            Encuentra lo que necesitas en Exofeverything.
           </p>
 
-          <div className="mt-10">
+        </div>
+      </section>
 
-            <h3 className="font-bold text-xl">
-              Colores
-            </h3>
+      {/* PRODUCTOS */}
+      <section className="max-w-7xl mx-auto px-6 py-12">
 
-            <div className="flex gap-3 mt-3">
+        {filteredProducts.length === 0 ? (
 
-              {product.colors.map((color) => (
-                <span
-                  key={color}
-                  className="border rounded-full px-4 py-2"
-                >
-                  {color}
-                </span>
-              ))}
+          <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
 
+            <div className="flex justify-center mb-6">
+              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
+                <PackageSearch
+                  size={48}
+                  className="text-gray-400"
+                />
+              </div>
             </div>
+
+            <h2 className="text-3xl font-black text-gray-900">
+              No encontramos productos
+            </h2>
+
+            <p className="text-gray-500 mt-3">
+              Intenta buscar otro producto o revisar otra categoría.
+            </p>
+
+            <Link
+              href="/productos"
+              className="inline-block mt-7 bg-black text-white px-7 py-3 rounded-xl font-bold hover:bg-zinc-800 transition"
+            >
+              Ver todos los productos
+            </Link>
 
           </div>
 
-          {product.storage && product.storage.length > 0 && (
-            <div className="mt-10">
+        ) : (
 
-              <h3 className="font-bold text-xl">
-                Almacenamiento
-              </h3>
+          <>
+            <div className="flex items-center justify-between mb-8">
 
-              <div className="flex gap-3 mt-3">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900">
+                  {filteredProducts.length}{" "}
+                  {filteredProducts.length === 1
+                    ? "producto"
+                    : "productos"}
+                </h2>
 
-                {product.storage.map((item) => (
-                  <span
-                    key={item}
-                    className="border rounded-full px-4 py-2"
-                  >
-                    {item}
-                  </span>
-                ))}
-
+                <p className="text-gray-500">
+                  Productos disponibles
+                </p>
               </div>
 
             </div>
-          )}
 
-          <a
-            href={buyProductMessage(product.name, product.price)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-12 w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl text-xl font-bold flex justify-center"
-          >
-            Comprar por WhatsApp
-          </a>
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
-        </div>
+              {filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                />
+              ))}
 
-      </div>
+            </div>
+          </>
+        )}
+
+      </section>
 
     </main>
   );

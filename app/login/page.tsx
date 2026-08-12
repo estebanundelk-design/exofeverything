@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-type User = {
-  name: string;
-  email: string;
-  password: string;
-};
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,62 +11,33 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    setError("");
     setLoading(true);
+    setError("");
 
-    try {
-      const savedUsers = localStorage.getItem("users");
-
-      const users: User[] = savedUsers
-        ? JSON.parse(savedUsers)
-        : [];
-
-      const user = users.find(
-        (item) =>
-          item.email.toLowerCase() ===
-            email.toLowerCase() &&
-          item.password === password
-      );
-
-      if (!user) {
-        setError(
-          "Correo o contraseña incorrectos."
-        );
-        setLoading(false);
-        return;
-      }
-
-      // Guardar sesión
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify({
-          name: user.name,
-          email: user.email,
-        })
-      );
-
-      // También dejamos una bandera sencilla de sesión
-      localStorage.setItem(
-        "isLoggedIn",
-        "true"
-      );
-
-      router.push("/admin");
-    } catch (error) {
-      console.error(error);
-
-      setError(
-        "No fue posible iniciar sesión."
-      );
-
+    if (!email || !password) {
+      setError("Ingresa tu correo y contraseña.");
       setLoading(false);
+      return;
     }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError("Correo o contraseña incorrectos.");
+      setLoading(false);
+      return;
+    }
+
+    router.push("/");
   }
 
   return (
@@ -89,7 +55,7 @@ export default function LoginPage() {
         </p>
 
         {error && (
-          <div className="mb-6 rounded-xl bg-red-50 border border-red-200 text-red-600 p-4">
+          <div className="mb-5 rounded-xl bg-red-100 text-red-700 p-4">
             {error}
           </div>
         )}
@@ -100,7 +66,6 @@ export default function LoginPage() {
 
         <input
           type="email"
-          required
           className="w-full border rounded-xl p-4 mt-2 mb-6"
           placeholder="correo@ejemplo.com"
           value={email}
@@ -113,7 +78,6 @@ export default function LoginPage() {
 
         <input
           type="password"
-          required
           className="w-full border rounded-xl p-4 mt-2 mb-8"
           placeholder="********"
           value={password}
@@ -123,11 +87,9 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-zinc-800 transition disabled:opacity-50"
+          className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-zinc-800 disabled:opacity-50"
         >
-          {loading
-            ? "Ingresando..."
-            : "Ingresar"}
+          {loading ? "Ingresando..." : "Ingresar"}
         </button>
 
         <p className="text-center mt-8 text-gray-500">

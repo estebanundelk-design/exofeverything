@@ -2,83 +2,63 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-type User = {
-  name: string;
-  email: string;
-  password: string;
-};
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
-  const router = useRouter();
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
 
+    setLoading(true);
+    setMessage("");
     setError("");
-    setSuccess("");
 
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setError("Por favor completa todos los campos.");
+    if (!name || !email || !password) {
+      setError("Completa todos los campos.");
+      setLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setError("La contraseña debe tener mínimo 6 caracteres.");
+      setLoading(false);
       return;
     }
 
-    try {
-      const savedUsers = localStorage.getItem("users");
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    });
 
-      const users: User[] = savedUsers
-        ? JSON.parse(savedUsers)
-        : [];
-
-      const existingUser = users.find(
-        (user) =>
-          user.email.toLowerCase() === email.toLowerCase()
-      );
-
-      if (existingUser) {
-        setError(
-          "Ya existe una cuenta con este correo."
-        );
-        return;
-      }
-
-      const newUser: User = {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-      };
-
-      localStorage.setItem(
-        "users",
-        JSON.stringify([...users, newUser])
-      );
-
-      setSuccess(
-        "Cuenta creada correctamente. Redirigiendo..."
-      );
-
-      setTimeout(() => {
-        router.push("/login");
-      }, 1000);
-    } catch (error) {
-      console.error(error);
-      setError(
-        "No fue posible crear la cuenta."
-      );
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
     }
+
+    if (data.user) {
+      setMessage(
+        "Cuenta creada correctamente. Ahora puedes iniciar sesión."
+      );
+
+      setName("");
+      setEmail("");
+      setPassword("");
+    }
+
+    setLoading(false);
   }
 
   return (
@@ -96,14 +76,14 @@ export default function RegisterPage() {
         </p>
 
         {error && (
-          <div className="mb-6 rounded-xl bg-red-50 border border-red-200 text-red-600 p-4">
+          <div className="mb-5 rounded-xl bg-red-100 text-red-700 p-4">
             {error}
           </div>
         )}
 
-        {success && (
-          <div className="mb-6 rounded-xl bg-green-50 border border-green-200 text-green-600 p-4">
-            {success}
+        {message && (
+          <div className="mb-5 rounded-xl bg-green-100 text-green-700 p-4">
+            {message}
           </div>
         )}
 
@@ -113,7 +93,6 @@ export default function RegisterPage() {
 
         <input
           type="text"
-          required
           className="w-full border rounded-xl p-4 mt-2 mb-6"
           placeholder="Tu nombre"
           value={name}
@@ -126,7 +105,6 @@ export default function RegisterPage() {
 
         <input
           type="email"
-          required
           className="w-full border rounded-xl p-4 mt-2 mb-6"
           placeholder="correo@ejemplo.com"
           value={email}
@@ -139,8 +117,6 @@ export default function RegisterPage() {
 
         <input
           type="password"
-          required
-          minLength={6}
           className="w-full border rounded-xl p-4 mt-2 mb-8"
           placeholder="Mínimo 6 caracteres"
           value={password}
@@ -149,9 +125,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-zinc-800 transition"
+          disabled={loading}
+          className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-zinc-800 disabled:opacity-50"
         >
-          Crear cuenta
+          {loading ? "Creando cuenta..." : "Crear cuenta"}
         </button>
 
         <p className="text-center mt-8 text-gray-500">
